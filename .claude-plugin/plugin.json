@@ -1,0 +1,16 @@
+{
+  "name": "richardcase-skills",
+  "version": "0.0.0",
+  "description": "Reusable agent skills by Richard Case.",
+  "author": {
+    "name": "Richard Case"
+  },
+  "homepage": "https://github.com/richardcase/skills",
+  "repository": "https://github.com/richardcase/skills",
+  "license": "Apache-2.0",
+  "keywords": [
+    "agent-skills",
+    "skills",
+    "productivity"
+  ]
+}

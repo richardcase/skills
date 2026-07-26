@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-marketplace.json",
+  "name": "richardcase",
+  "owner": {
+    "name": "Richard Case"
+  },
+  "description": "Richard Case's reusable agent skills for Claude Code.",
+  "plugins": [
+    {
+      "name": "richardcase-skills",
+      "source": "./",
+      "description": "Reusable agent skills by Richard Case.",
+      "category": "productivity",
+      "keywords": [
+        "agent-skills",
+        "skills",
+        "productivity"
+      ]
+    }
+  ]
+}
