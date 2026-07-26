@@ -1,0 +1,32 @@
+{
+  "name": "richardcase-skills",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Reusable agent skills by Richard Case",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/richardcase/skills"
+  },
+  "license": "Apache-2.0",
+  "scripts": {
+    "changeset": "changeset",
+    "check": "npm run validate:skills && npm run test:install && npm run validate:plugin && npm run validate:version",
+    "release": "changeset tag",
+    "test:install": "node scripts/smoke-test-install.mjs",
+    "validate:plugin": "claude plugin validate .",
+    "validate:skills": "node scripts/validate-skills.mjs",
+    "validate:version": "node scripts/validate-version.mjs",
+    "version": "changeset version && node scripts/sync-plugin-version.mjs"
+  },
+  "packageManager": "npm@10.9.4",
+  "devDependencies": {
+    "@anthropic-ai/claude-code": "^2.1.220",
+    "@changesets/changelog-github": "^0.7.0",
+    "@changesets/cli": "^2.31.1",
+    "skills": "^1.5.20",
+    "yaml": "^2.9.0"
+  },
+  "allowScripts": {
+    "@anthropic-ai/claude-code@2.1.220": true
+  }
+}
