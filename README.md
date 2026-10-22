@@ -45,6 +45,7 @@ Plugin skills are namespaced. For example, invoke the starter skill with:
 
 | Skill | Description |
 | --- | --- |
+| [`gh-issue-workflow`](skills/gh-issue-workflow/SKILL.md) | Take a GitHub issue from assignment to a merged pull request in a Herdr worktree: grilled plan, Claude and Codex reviews, signed conventional commits, review feedback, retro. |
 | [`hello-world`](skills/hello-world/SKILL.md) | A minimal greeting skill that verifies installation and invocation. |
 
 ## Add a skill

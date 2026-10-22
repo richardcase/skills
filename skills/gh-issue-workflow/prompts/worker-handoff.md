@@ -1,0 +1,1 @@
+Use the gh-issue-workflow skill for {URL} at stage plan. Invoke that skill before you do anything else. The worktree, the branch issue-{N}, and the state file already exist. Start with the preflight, then read the issue and begin the grilling.
