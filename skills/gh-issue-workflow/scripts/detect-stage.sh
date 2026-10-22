@@ -29,6 +29,8 @@ assignees=$(jq -c '[.assignees[]?.login]' <<<"$issue")
 plans=$(jq '[.comments[]?.body | select(startswith("<!-- gh-issue-workflow: plan"))] | length' <<<"$issue")
 retros=$(jq '[.comments[]?.body | select(startswith("<!-- gh-issue-workflow: retro"))] | length' <<<"$issue")
 abandoned=$(jq '[.comments[]?.body | select(startswith("<!-- gh-issue-workflow: abandoned"))] | length' <<<"$issue")
+epics=$(jq '[.comments[]?.body | select(startswith("<!-- gh-issue-workflow: epic v"))] | length' <<<"$issue")
+epic_retros=$(jq '[.comments[]?.body | select(startswith("<!-- gh-issue-workflow: epic-retro"))] | length' <<<"$issue")
 pr=$(gh pr list --repo "$owner/$repo" --head "issue-$number" --state all --json number,state,url,isDraft,mergedAt 2>/dev/null | jq -c '.[0] // null')
 pr_state=$(jq -r '.state // ""' <<<"$pr")
 ready=null
@@ -41,7 +43,9 @@ standards=$(jq -r '.standards_review.result // ""' <<<"$state"); security=$(jq -
 reviews_done=false; [ "$code_review" = pass ] && [ -n "$standards" ] && [ -n "$security" ] && reviews_done=true
 
 stage=""; note=""
-if [ "$pr" != null ] && [ "$pr_state" != OPEN ] && [ "$retros" -gt 0 ]; then stage=done; note="PR $pr_state and retro posted"
+if [ "$epic_retros" -gt 0 ]; then stage=done; note="epic complete"
+elif [ "$epics" -gt 0 ]; then stage=epic-status; note="epic in progress; read-only status from the parent comment and epic-$number.json"
+elif [ "$pr" != null ] && [ "$pr_state" != OPEN ] && [ "$retros" -gt 0 ]; then stage=done; note="PR $pr_state and retro posted"
 elif [ "$pr" != null ] && [ "$pr_state" != OPEN ]; then stage=retro; note="PR $pr_state, no retro comment yet"
 elif [ "$pr" != null ] && [ "$decision" = APPROVED ] && { [ "$mstate" = CLEAN ] || [ "$mstate" = UNSTABLE ]; }; then stage=merge; note="PR approved and $mstate"
 elif [ "$pr" != null ]; then stage=feedback; note="PR open"
@@ -58,6 +62,6 @@ if [ -n "$forced" ]; then stage="$forced"; isforced=true; note="stage given on t
 jq -cn --arg stage "$stage" --argjson forced "$isforced" --arg note "$note" \
   --arg url "$url" --arg owner "$owner" --arg repo "$repo" --arg number "$number" --arg branch "$branch" \
   --argjson on_issue_branch "$on_issue_branch" --argjson herdr "$herdr" --arg issue_state "$issue_state" \
-  --argjson assignees "$assignees" --argjson plans "$plans" --argjson retros "$retros" --argjson abandoned "$abandoned" --argjson pr "$pr" --argjson ready "$ready" \
+  --argjson assignees "$assignees" --argjson plans "$plans" --argjson retros "$retros" --argjson abandoned "$abandoned" --argjson epics "$epics" --argjson pr "$pr" --argjson ready "$ready" \
   --arg code_review "$code_review" --arg standards "$standards" --arg security "$security" --arg state_dir "${sd:-}" \
-  '{stage:$stage,forced:$forced,note:$note,facts:{issue_url:$url,owner:$owner,repo:$repo,number:($number|tonumber),branch:$branch,on_issue_branch:$on_issue_branch,herdr_env:$herdr,issue_state:$issue_state,assignees:$assignees,plan_comments:$plans,retro_comments:$retros,abandoned_comments:$abandoned,pr:$pr,pr_readiness:$ready,code_review_result:$code_review,standards_review_result:$standards,security_review_result:$security,state_dir:$state_dir}}'
+  '{stage:$stage,forced:$forced,note:$note,facts:{issue_url:$url,owner:$owner,repo:$repo,number:($number|tonumber),branch:$branch,on_issue_branch:$on_issue_branch,herdr_env:$herdr,issue_state:$issue_state,assignees:$assignees,plan_comments:$plans,retro_comments:$retros,abandoned_comments:$abandoned,epic_comments:$epics,pr:$pr,pr_readiness:$ready,code_review_result:$code_review,standards_review_result:$standards,security_review_result:$security,state_dir:$state_dir}}'

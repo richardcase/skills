@@ -22,3 +22,10 @@ jq -r '.result.worktrees[] | select(.branch | test("^issue-[0-9]+$")) | [.branch
   age=$(git -C "$path" log -1 --format=%cr 2>/dev/null || echo "-")
   printf '%-8s %-24s %-10s %-10s %-8s %s\n' "#$n" "$repo" "$stage" "$pr" "$ws" "$age"
 done
+# epics tracked from this repository's main clone
+common="$(git rev-parse --git-common-dir 2>/dev/null)/gh-issue-workflow"
+for f in "$common"/epic-*.json; do
+  [ -f "$f" ] || continue
+  jq -r '"\(.parent_url | sub(".*/issues/"; "#"))\t\([.children[] | select(.stage == "done")] | length)/\(.children | length) children done\tnext: \(([.children[] | select(.stage != "done" and .stage != "abandoned")][0].url // "none") | sub(".*/issues/"; "#"))"' "$f" \
+  | while IFS=$'\t' read -r p done next; do printf '%-8s %-24s %-10s %-10s %-8s %s\n' "$p" "epic" "$done" "-" "-" "$next"; done
+done

@@ -22,6 +22,7 @@ Use only the commands written here. Read every id and path from the JSON a comma
    gh issue view "$URL" --json number,title,body,assignees,state,url,labels
    ```
    State `CLOSED`: stop and ask.
+2b. Children: `bash "$SKILL_DIR/scripts/epic.sh" children "$URL"`. One or more lines means this issue is an epic: do the `epic` stage below instead of steps 3 to 11.
 3. Repo lookup. `gh repo view --json nameWithOwner -q .nameWithOwner` must equal `OWNER/REPO`. If it does not, stop and ask the user for the path of their clone, `cd` there, and check again. Then `REPO_ROOT=$(git rev-parse --show-toplevel)`.
 4. Assign. If `.assignees` is empty: `gh issue edit "$URL" --add-assignee @me`. If someone else is assigned: ask; continue only on yes. No label, no comment.
 5. Base branch:
@@ -162,6 +163,17 @@ bash "$SKILL_DIR/scripts/ci-watch.sh" "$PR"      # waits; prints {result, failin
 - The log does not match the code you pushed (the test passes locally on the same head, the log is unchanged): there is nothing to fix. Do not invent a change. `notify.sh ci-red` with that mismatch in the body, report it, and end the turn, even before the second attempt.
 - `timeout`: report it and end the turn; do not push.
 
+## epic (launcher pane; entered from `start` when the issue has children)
+
+An epic is an issue with sub-issues (GitHub sub-issues API), task-list references (`- [ ] #M`), or `blocked by #M` / `depends on #M` lines. Children run one at a time, each through the full workflow in its own worktree.
+
+1. Assign the parent if unassigned (same rule as `start` step 4). `CHILDREN=$(epic.sh children "$URL")`; `gh issue view` each child for its title, state, and assignee. A closed child is skipped. A child assigned to someone else is listed and skipped unless the user says otherwise.
+2. REQUIRED SUB-SKILL `grilling`, one short round: the order (propose dependency order: a child named in another child's `blocked by` goes first), what to do when a child escalates or is abandoned (default: stop the chain and notify), and whether to close the parent at the end (default: yes, after a gate).
+3. `epic.sh init "$URL" <child urls in order>` writes `epic-N.json` under the main clone's `.git/gh-issue-workflow/`.
+4. Post the epic comment on the parent: line 1 `<!-- gh-issue-workflow: epic v1 -->`, an ordered list of the children, and `epic.sh table "$URL"`. Save the comment id: `gh api repos/O/R/issues/N/comments -F body=@<file> --jq .id` into `epic-N.json` as `epic_comment_id`.
+5. Run the `start` stage for the first child (steps 3 to 11). After step 8 writes the child's `state.json`, add `.epic = {parent_url, order, index: 0, epic_comment_id}` with `state.sh set`. `epic.sh mark "$URL" <child> started`, then rewrite the parent comment with the new table (`gh api -X PATCH repos/O/R/issues/comments/<epic_comment_id> -F body=@<file>`). Do the same rewrite whenever a child's row changes.
+6. Report: the order, the parent comment URL, and the first child's workspace. Stop. The next child starts from the previous child's retro.
+
 ## retro (any pane)
 
 1. Preflight `retro`.
@@ -181,5 +193,6 @@ bash "$SKILL_DIR/scripts/ci-watch.sh" "$PR"      # waits; prints {result, failin
    gh issue create --repo richardcase/skills --title "gh-issue-workflow: <lesson>" --body-file <file>
    ```
    No yes, no issue.
+4b. Epic child. If `state.json` has `.epic`, then with `P=$(state.sh get .epic.parent_url)`: `epic.sh mark "$P" "$URL" done "<pr url>"`, rewrite the parent's epic comment (`epic.sh table "$P"` under the marker and the order list; `gh api -X PATCH repos/O/R/issues/comments/<epic_comment_id>`), and `notify.sh retro-posted "epic <parent N>: child #N done" "<k> of <n> children merged"`. Then `NEXT=$(epic.sh next "$P")`. If `NEXT` is non-empty, run the `start` stage for `NEXT` from this worktree's `repo_root` (same steps 3 to 11; the launcher writes `.epic = {parent_url, order, index: <k+1>, epic_comment_id}` into the child's `state.json`). If `NEXT` is empty, post the epic retro on the parent: line 1 `<!-- gh-issue-workflow: epic-retro v1 -->`, one line per child with its PR and outcome, totals from `metrics.sh summary --repo "$OWNER/$REPO"`; gate ("Say go to close the epic"); on go `gh issue close "$P" --comment "<STE: all children merged>"`.
 5. `state.stage = "done"`. End the report with the removal offer, using the real id from `herdr worktree list`:
    `herdr worktree remove --workspace <workspace-id>`. Never run it unasked.
