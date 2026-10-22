@@ -13,9 +13,9 @@ warn() { warnings+=("$(jq -cn --arg w "$1" '$w')"); }
 for_stage() { local s; for s in "$@"; do [ "$stage" = all ] || [ "$stage" = start ] || [ "$stage" = "$s" ] && return 0; done; return 1; }
 
 for b in git gh jq python3; do command -v "$b" >/dev/null || need "binary $b" "install $b"; done
-if for_stage start; then
+if for_stage start abandon; then
   command -v herdr >/dev/null || need "binary herdr" "install Herdr and run this from a Herdr pane"
-  [ "${HERDR_ENV:-}" = 1 ] || need "HERDR_ENV=1" "run the start stage from a pane inside Herdr"
+  [ "${HERDR_ENV:-}" = 1 ] || need "HERDR_ENV=1" "run this stage from a pane inside Herdr"
 fi
 if for_stage plan implement; then
   if command -v codex >/dev/null; then
@@ -27,7 +27,7 @@ fi
 if command -v gh >/dev/null; then
   gh auth status >/dev/null 2>&1 || need "gh login" "run: gh auth login"
 fi
-if for_stage implement pr feedback; then
+if for_stage implement pr feedback merge; then
   [ "$(git config --get commit.gpgsign 2>/dev/null)" = true ] || need "git commit.gpgsign=true" "run: git config --global commit.gpgsign true"
   [ -n "$(git config --get user.signingkey 2>/dev/null)" ] || need "git user.signingkey" "set git user.signingkey to your GPG key id or SSH public key path"
 fi
@@ -36,7 +36,7 @@ skills_for() {
   case "$1" in
     plan) echo grilling superpowers:writing-plans simplified-technical-english;;
     implement) echo superpowers:executing-plans superpowers:verification-before-completion;;
-    pr|retro) echo simplified-technical-english;;
+    pr|retro|merge|abandon) echo simplified-technical-english;;
     feedback) echo superpowers:receiving-code-review simplified-technical-english;;
     start|all) echo grilling superpowers:writing-plans superpowers:executing-plans superpowers:verification-before-completion superpowers:receiving-code-review simplified-technical-english;;
   esac
@@ -49,7 +49,7 @@ for s in $(skills_for "$stage"); do
     *) need "skill $s" "install the $s skill";;
   esac
 done
-if for_stage plan pr feedback retro; then
+if for_stage plan pr feedback retro merge abandon; then
   d=$(find_skill_dir simplified-technical-english 2>/dev/null || true)
   [ -n "$d" ] && [ ! -f "$d/scripts/ste_check.py" ] && need "ste_check.py" "reinstall simplified-technical-english; scripts/ste_check.py is missing"
 fi

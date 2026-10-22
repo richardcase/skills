@@ -82,7 +82,7 @@ Use only the commands written here. Read every id and path from the JSON a comma
 
 ## pr (worker)
 
-1. Preflight `pr`. `bash "$SKILL_DIR/scripts/check-commits.sh" "origin/$BASE"` prints `OK`. Fix with `git commit --amend -F` or an interactive-free rebase otherwise.
+1. Preflight `pr`. Base sync: `bash "$SKILL_DIR/scripts/base-sync.sh" "$BASE"`. If `behind > 0`, `git rebase "origin/$BASE"` (nothing is pushed yet, so no gate and no force). On a conflict: for each file run `git log -p -n 3 "origin/$BASE" -- <file>` to understand both sides, keep both intents, stage, `git rebase --continue`; when the right resolution is unclear, stop and ask. Re-run the tests after a rebase. Then `bash "$SKILL_DIR/scripts/check-commits.sh" "origin/$BASE"` prints `OK`. Fix with `git commit --amend -F` or an interactive-free rebase otherwise.
 2. Write `$STATE_DIR/pr-body.md` from the PR recipe. `ste-check.sh descriptive` on it: exit 0.
 3. Gate. Show `git log --format='%h %G? %s' "origin/$BASE..HEAD"`, the title, and the body. `notify.sh gate "issue $N: PR needs your go" "<title>. Say go to push and open the PR."` End the turn with: "Say go to push and open the PR." Edits requested here go back to step 2.
 4. On go:
@@ -92,6 +92,7 @@ Use only the commands written here. Read every id and path from the JSON a comma
    gh pr view --json url,isDraft,state,body -q '{url,isDraft,state,closes:(.body|test("Closes #'"$N"'"))}'
    ```
    Expect `isDraft: false` and `closes: true`.
+4b. CI watch: `bash "$SKILL_DIR/scripts/ci-watch.sh" "$PR"`. See "CI watch" below. A red result after the cap ends the turn.
 5. `state.sh set .stage '"feedback"'`, `state.sh stamp pr_opened`, `notify.sh pr-opened "issue $N: PR opened" "<pr url>"`. Report the URL. End the turn.
 
 ## feedback (worker, on re-invoke)
@@ -106,12 +107,56 @@ Use only the commands written here. Read every id and path from the JSON a comma
 2. Nothing new: report "no open feedback" and stop.
 3. REQUIRED SUB-SKILL `superpowers:receiving-code-review`. Per item: restate it, verify it against the code, then fix (commit per the contract) or rebut with evidence. No "you're right" without a check.
 4. Reply. Thread: write the reply to a file, STE gate, then `pr-threads.sh reply "$PR" <comment-database-id> <file>`. Top-level comment: `gh pr comment "$PR" --body-file <file>`. Fixed thread: `pr-threads.sh resolve <thread-node-id>`. Rebutted thread: leave open.
-5. `git push`. Fix commits land on top. Offer a fold (name which fix belongs to which commit); `--force-with-lease` only after the user asks.
+5. Base sync: `bash "$SKILL_DIR/scripts/base-sync.sh" "$BASE"`. When `behind > 0` and the PR shows `mergeStateStatus` BEHIND or DIRTY, or `mergeable` CONFLICTING: rebase as in the `pr` stage, re-run the tests, then gate: show `git log --oneline "origin/$BASE..HEAD"`, `notify.sh gate "issue $N: force-push needs your go" "Rebased onto $BASE. Say go to force-push."`, end the turn. On go: `git push --force-with-lease`. Otherwise `git push`. Fix commits land on top. Offer a fold (name which fix belongs to which commit); `--force-with-lease` only after the user asks.
+5b. CI watch: `bash "$SKILL_DIR/scripts/ci-watch.sh" "$PR"`. See "CI watch" below.
 6. Re-review. For each human reviewer whose latest review is `CHANGES_REQUESTED`:
    ```bash
    gh pr edit "$PR" --add-reviewer <login>
    ```
 7. Set `last_pr_comment_id` to the highest `databaseId` seen. `notify.sh feedback-done "issue $N: feedback handled" "<k> fixed, <r> rebutted"`. Report a table: item, action (fixed in `<sha>`, resolved | rebutted, reply URL, open).
+
+## merge (worker, detected when the PR is APPROVED and CLEAN or UNSTABLE)
+
+1. Preflight `merge`. `bash "$SKILL_DIR/scripts/pr-threads.sh" list "$PR" --since <last_pr_comment_id>` must show no unresolved threads and no new comments; otherwise do the `feedback` stage first.
+2. Readiness: `gh pr view "$PR" --json reviewDecision,mergeStateStatus,mergeable,headRefOid`. `headRefOid` must equal `git rev-parse HEAD`; if it does not, stop: the PR head is not what you have, find out why (unpushed commit, someone else pushed) before anything else. BEHIND, DIRTY, or CONFLICTING: base sync and rebase as in `feedback` step 5, with its force-push gate, then re-check.
+3. Policy: `gh repo view --json mergeCommitAllowed -q .mergeCommitAllowed` must be `true`. If not, stop, print the allowed methods, and ask; a rebase or squash merge rewrites the signed commits.
+4. Gate. Show the PR URL, the head sha, `git log --oneline "origin/$BASE..HEAD"`, and the checks summary. `notify.sh gate "issue $N: merge needs your go" "PR <url> is approved and green. Say go to merge."` End the turn with: "Say go to merge."
+5. On go:
+   ```bash
+   gh pr merge "$PR" --merge --delete-branch --match-head-commit "$(git rev-parse HEAD)"
+   gh pr view "$PR" --json state,mergedAt
+   ```
+   Check `state` first. If it is not MERGED, stop and report; do not stamp or notify. When it is MERGED: `state.sh stamp merged`, `state.sh set .stage '"retro"'`, `notify.sh merged "issue $N: merged" "<pr url>"`. Continue to `retro` in the same turn.
+
+## abandon (explicit word only, never detected)
+
+1. Preflight `abandon`. Read `state.json`, `gh pr list --head "issue-$N" --state open`, `herdr worktree list` (for the workspace id), and `git -C <worktree> status --short` for unpushed or uncommitted work.
+2. Gate. Show what will happen: issue comment with the reason, PR close with a comment (if open), unassign, worktree and workspace removal, local branch delete; the remote branch is kept. Mention any unpushed or uncommitted work found. `notify.sh gate "issue $N: abandon needs your go" "Say go to abandon."` End the turn with: "Say go to abandon."
+3. On go, from the main clone (`repo_root` in `state.json`):
+   ```bash
+   gh issue comment "$URL" --body-file <file>      # line 1: <!-- gh-issue-workflow: abandoned v1 -->, then the reason in STE
+   gh pr close "$PR" --comment "<STE reason>"      # only when a PR is open
+   gh issue edit "$URL" --remove-assignee @me
+   bash "$SKILL_DIR/scripts/metrics.sh" append "$STATE_DIR" abandoned 2>/dev/null || true
+   herdr worktree remove --workspace <workspace-id>
+   git worktree prune
+   git branch -D "issue-$N"
+   ```
+   If the worktree directory still exists after `herdr worktree remove`, run `git worktree remove --force <path>` and then the branch delete.
+   Do not run `git push origin --delete`. The remote branch stays so the work can be recovered. Do not close the issue; say in the report that it is still open and unassigned.
+
+## CI watch (after every push in pr, feedback, and merge)
+
+```bash
+bash "$SKILL_DIR/scripts/ci-watch.sh" "$PR"      # waits; prints {result, failing:[{name, run_id, log_tail, head_sha}]}
+```
+
+- `pass` or `none`: `state.sh set .ci.attempts 0` and continue.
+- `fail` with a `head_sha` that is not `git rev-parse HEAD`: the run is stale. `gh run rerun <run_id>` and watch again. A rerun is not an attempt.
+- `fail` on the current head: each failing check is a feedback item. Read `log_tail`, reproduce locally, fix, commit per the contract, `git push`, `state.sh set .ci.attempts <n+1>`, watch again.
+- After 2 attempts the checks are still red: `notify.sh ci-red "issue $N: CI still red" "<failing names> after 2 fix attempts"`, write the failing names and the last log tail in the report, and end the turn. No third push.
+- The log does not match the code you pushed (the test passes locally on the same head, the log is unchanged): there is nothing to fix. Do not invent a change. `notify.sh ci-red` with that mismatch in the body, report it, and end the turn, even before the second attempt.
+- `timeout`: report it and end the turn; do not push.
 
 ## retro (any pane)
 

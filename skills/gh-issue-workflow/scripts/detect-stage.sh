@@ -28,14 +28,22 @@ issue_state=$(jq -r '.state // "UNKNOWN"' <<<"$issue")
 assignees=$(jq -c '[.assignees[]?.login]' <<<"$issue")
 plans=$(jq '[.comments[]?.body | select(startswith("<!-- gh-issue-workflow: plan"))] | length' <<<"$issue")
 retros=$(jq '[.comments[]?.body | select(startswith("<!-- gh-issue-workflow: retro"))] | length' <<<"$issue")
+abandoned=$(jq '[.comments[]?.body | select(startswith("<!-- gh-issue-workflow: abandoned"))] | length' <<<"$issue")
 pr=$(gh pr list --repo "$owner/$repo" --head "issue-$number" --state all --json number,state,url,isDraft,mergedAt 2>/dev/null | jq -c '.[0] // null')
 pr_state=$(jq -r '.state // ""' <<<"$pr")
+ready=null
+if [ "$pr_state" = OPEN ]; then
+  ready=$(gh pr view "$(jq -r .number <<<"$pr")" --repo "$owner/$repo" --json reviewDecision,mergeStateStatus,mergeable 2>/dev/null || echo null)
+fi
+decision=$(jq -r '.reviewDecision // ""' <<<"$ready"); mstate=$(jq -r '.mergeStateStatus // ""' <<<"$ready")
 code_review=$(jq -r '.code_review.result // ""' <<<"$state")
 
 stage=""; note=""
 if [ "$pr" != null ] && [ "$pr_state" != OPEN ] && [ "$retros" -gt 0 ]; then stage=done; note="PR $pr_state and retro posted"
 elif [ "$pr" != null ] && [ "$pr_state" != OPEN ]; then stage=retro; note="PR $pr_state, no retro comment yet"
+elif [ "$pr" != null ] && [ "$decision" = APPROVED ] && { [ "$mstate" = CLEAN ] || [ "$mstate" = UNSTABLE ]; }; then stage=merge; note="PR approved and $mstate"
 elif [ "$pr" != null ]; then stage=feedback; note="PR open"
+elif [ "$abandoned" -gt 0 ]; then stage=done; note="abandoned"
 elif [ "$issue_state" = CLOSED ]; then stage=ask; note="issue is closed and has no PR; ask the user"
 elif $on_issue_branch && [ "$plans" -gt 0 ] && [ "$code_review" = pass ]; then stage=pr; note="plan posted, code review passed"
 elif $on_issue_branch && [ "$plans" -gt 0 ]; then stage=implement; note="plan posted"
@@ -48,6 +56,6 @@ if [ -n "$forced" ]; then stage="$forced"; isforced=true; note="stage given on t
 jq -cn --arg stage "$stage" --argjson forced "$isforced" --arg note "$note" \
   --arg url "$url" --arg owner "$owner" --arg repo "$repo" --arg number "$number" --arg branch "$branch" \
   --argjson on_issue_branch "$on_issue_branch" --argjson herdr "$herdr" --arg issue_state "$issue_state" \
-  --argjson assignees "$assignees" --argjson plans "$plans" --argjson retros "$retros" --argjson pr "$pr" \
+  --argjson assignees "$assignees" --argjson plans "$plans" --argjson retros "$retros" --argjson abandoned "$abandoned" --argjson pr "$pr" --argjson ready "$ready" \
   --arg code_review "$code_review" --arg state_dir "${sd:-}" \
-  '{stage:$stage,forced:$forced,note:$note,facts:{issue_url:$url,owner:$owner,repo:$repo,number:($number|tonumber),branch:$branch,on_issue_branch:$on_issue_branch,herdr_env:$herdr,issue_state:$issue_state,assignees:$assignees,plan_comments:$plans,retro_comments:$retros,pr:$pr,code_review_result:$code_review,state_dir:$state_dir}}'
+  '{stage:$stage,forced:$forced,note:$note,facts:{issue_url:$url,owner:$owner,repo:$repo,number:($number|tonumber),branch:$branch,on_issue_branch:$on_issue_branch,herdr_env:$herdr,issue_state:$issue_state,assignees:$assignees,plan_comments:$plans,retro_comments:$retros,abandoned_comments:$abandoned,pr:$pr,pr_readiness:$ready,code_review_result:$code_review,state_dir:$state_dir}}'

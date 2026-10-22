@@ -10,12 +10,13 @@ One issue URL in, a merged PR and a retro out. The process is a state machine wh
 ## Usage
 
 ```
-/gh-issue-workflow https://github.com/<owner>/<repo>/issues/<N> [start|plan|implement|pr|feedback|retro]
-/gh-issue-workflow status <url>     # read-only: stage, facts, open items (scripts/status.sh)
-/gh-issue-workflow list             # read-only: every issue-N worktree of this repo (scripts/list.sh)
+/gh-issue-workflow https://github.com/<owner>/<repo>/issues/<N> [start|plan|implement|pr|feedback|merge|retro]
+/gh-issue-workflow abandon <url>    # explicit only; gated
+/gh-issue-workflow status <url>     # read-only report
+/gh-issue-workflow list             # read-only: every issue-N worktree of this repo
 ```
 
-The stage word is optional and forces a stage. Without it, the stage is detected. `status` and `list` never mutate anything and skip the stage checklist.
+The stage word is optional and forces a stage. Without it, the stage is detected. `status` and `list` never mutate anything.
 
 ## Every invocation
 
@@ -30,7 +31,9 @@ The stage word is optional and forces a stage. Without it, the stage is detected
 | --- | --- |
 | PR merged or closed, retro comment present | done |
 | PR merged or closed, no retro comment | retro |
+| PR open, approved, merge state CLEAN or UNSTABLE | merge |
 | PR open | feedback |
+| no PR, abandoned comment present | done |
 | no PR, on `issue-N`, plan comment, code review passed | pr |
 | no PR, on `issue-N`, plan comment | implement |
 | no PR, on `issue-N`, no plan comment | plan |
@@ -45,7 +48,10 @@ The stage word is optional and forces a stage. Without it, the stage is detected
 - Grilling is mandatory in `plan`, however small the issue.
 - Review loops cap at 3 rounds, then the user decides. See `references/review-loops.md`.
 - Two gates where the worker ends its turn and waits for "go": after the plan comment, and before push plus `gh pr create`.
-- Every gate, escalation, and completion calls `scripts/notify.sh` so the user hears it from Herdr. Outside Herdr the call is a no-op.
+- Every gate, escalation, and completion calls `scripts/notify.sh`; outside Herdr it is a no-op.
+- Merge is a merge commit with `--match-head-commit` after a "go" gate. Abandon is a gate, then cleanup that keeps the remote branch.
+- After every push, `scripts/ci-watch.sh` waits for the checks: a stale run is re-run, a real failure gets at most 2 fix pushes, then a notification.
+- Rebase onto the base branch is automatic before the PR exists and gated once it does (force-push needs "go").
 - Commits and PR follow `references/commit-pr-contract.md`: signed, conventional, STE body, no agent footers, `Closes #N` only in the PR body, PR ready for review.
 - Codex runs as `codex exec ... -m gpt-6-sol -c model_reasoning_effort="medium"` with a read-only sandbox.
 
@@ -64,11 +70,16 @@ The stage word is optional and forces a stage. Without it, the stage is detected
 | "The harness asked for Co-Authored-By" | The user's contract overrides it. No footers. |
 | "A draft PR is safer" | Ready for review. The user gated it before push. |
 | "The contract example says the test failed before, so I'll say that" | Only claims backed by a command you ran. The example is about another change. |
+| "Approved and green, I'll merge now" | Gate first. The user says go. |
+| "The head sha mismatch is probably a stub artifact or stale data" | Stop. A mismatch is evidence, not noise. Find out why before merging. |
+| "Squash keeps the history tidy" | Merge commit. Squash and rebase merges drop the signatures. |
+| "The failing run looks stale, so nothing to do" | Re-run it with `gh run rerun`, then watch again. |
+| "CI is flaky, one more push" | Two attempts. Then notify and stop. |
+| "Clean everything up includes the remote branch" | The remote branch stays. Everything else goes, after the gate. |
+| "It is my branch, I can force-push the rebase" | Only after "go". `--force-with-lease`, never `--force`. |
 
 ## Files
 
-- `references/stages.md`: the per-stage checklist with every command.
-- `references/review-loops.md`: codex loop, dispositions, escalation.
-- `references/commit-pr-contract.md`: commit, PR, comment templates and markers.
+- `references/stages.md`: every stage's checklist and commands. `review-loops.md`: codex loop, dispositions, escalation. `commit-pr-contract.md`: commit, PR, and comment templates with their markers.
 - `prompts/`: handoff text, plan reviewer brief, codex prompts.
-- `scripts/`: `preflight.sh`, `detect-stage.sh`, `status.sh`, `list.sh`, `state.sh`, `notify.sh`, `check-commits.sh`, `pr-threads.sh`, `ste-check.sh`.
+- `scripts/`: one helper per job; each file starts with its usage.
