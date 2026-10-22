@@ -169,7 +169,7 @@ bash "$SKILL_DIR/scripts/ci-watch.sh" "$PR"      # waits; prints {result, failin
    gh pr view "$PR" --json number,state,mergedAt,closedAt,reviews,comments,commits
    ```
    plus round counts from `state.json` and the disposition files.
-2. Write `$STATE_DIR/retro.md` from the retro template. STE gate on the prose lines. `gh issue comment "$URL" --body-file "$STATE_DIR/retro.md"`. `state.sh stamp retro`, `notify.sh retro-posted "issue $N: retro posted" "<comment url>"`.
+2. Write `$STATE_DIR/retro.md` from the retro template. STE gate on the prose lines. `gh issue comment "$URL" --body-file "$STATE_DIR/retro.md"`. `state.sh stamp retro`, `notify.sh retro-posted "issue $N: retro posted" "<comment url>"`. Then `bash "$SKILL_DIR/scripts/metrics.sh" append "$STATE_DIR" merged` (or `closed` when the PR closed without merge). The retro comment's Reviews line ends with one sentence that compares this issue's rounds and hours to the medians from `metrics.sh summary --repo "$OWNER/$REPO"`.
 3. Repo lessons to memory. Target the main clone's project memory, not the worktree's:
    ```bash
    MAIN=$(dirname "$(git rev-parse --git-common-dir)")
