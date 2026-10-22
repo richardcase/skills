@@ -37,6 +37,8 @@ if [ "$pr_state" = OPEN ]; then
 fi
 decision=$(jq -r '.reviewDecision // ""' <<<"$ready"); mstate=$(jq -r '.mergeStateStatus // ""' <<<"$ready")
 code_review=$(jq -r '.code_review.result // ""' <<<"$state")
+standards=$(jq -r '.standards_review.result // ""' <<<"$state"); security=$(jq -r '.security_review.result // ""' <<<"$state")
+reviews_done=false; [ "$code_review" = pass ] && [ -n "$standards" ] && [ -n "$security" ] && reviews_done=true
 
 stage=""; note=""
 if [ "$pr" != null ] && [ "$pr_state" != OPEN ] && [ "$retros" -gt 0 ]; then stage=done; note="PR $pr_state and retro posted"
@@ -45,7 +47,7 @@ elif [ "$pr" != null ] && [ "$decision" = APPROVED ] && { [ "$mstate" = CLEAN ] 
 elif [ "$pr" != null ]; then stage=feedback; note="PR open"
 elif [ "$abandoned" -gt 0 ]; then stage=done; note="abandoned"
 elif [ "$issue_state" = CLOSED ]; then stage=ask; note="issue is closed and has no PR; ask the user"
-elif $on_issue_branch && [ "$plans" -gt 0 ] && [ "$code_review" = pass ]; then stage=pr; note="plan posted, code review passed"
+elif $on_issue_branch && [ "$plans" -gt 0 ] && $reviews_done; then stage=pr; note="plan posted, code, standards, and security reviews done"
 elif $on_issue_branch && [ "$plans" -gt 0 ]; then stage=implement; note="plan posted"
 elif $on_issue_branch; then stage=plan; note="on the issue branch, no plan comment"
 elif $herdr; then stage=start; note="not on issue-$number; launch the worktree"
@@ -57,5 +59,5 @@ jq -cn --arg stage "$stage" --argjson forced "$isforced" --arg note "$note" \
   --arg url "$url" --arg owner "$owner" --arg repo "$repo" --arg number "$number" --arg branch "$branch" \
   --argjson on_issue_branch "$on_issue_branch" --argjson herdr "$herdr" --arg issue_state "$issue_state" \
   --argjson assignees "$assignees" --argjson plans "$plans" --argjson retros "$retros" --argjson abandoned "$abandoned" --argjson pr "$pr" --argjson ready "$ready" \
-  --arg code_review "$code_review" --arg state_dir "${sd:-}" \
-  '{stage:$stage,forced:$forced,note:$note,facts:{issue_url:$url,owner:$owner,repo:$repo,number:($number|tonumber),branch:$branch,on_issue_branch:$on_issue_branch,herdr_env:$herdr,issue_state:$issue_state,assignees:$assignees,plan_comments:$plans,retro_comments:$retros,abandoned_comments:$abandoned,pr:$pr,pr_readiness:$ready,code_review_result:$code_review,state_dir:$state_dir}}'
+  --arg code_review "$code_review" --arg standards "$standards" --arg security "$security" --arg state_dir "${sd:-}" \
+  '{stage:$stage,forced:$forced,note:$note,facts:{issue_url:$url,owner:$owner,repo:$repo,number:($number|tonumber),branch:$branch,on_issue_branch:$on_issue_branch,herdr_env:$herdr,issue_state:$issue_state,assignees:$assignees,plan_comments:$plans,retro_comments:$retros,abandoned_comments:$abandoned,pr:$pr,pr_readiness:$ready,code_review_result:$code_review,standards_review_result:$standards,security_review_result:$security,state_dir:$state_dir}}'

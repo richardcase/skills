@@ -54,6 +54,10 @@ if for_stage plan pr feedback retro merge abandon; then
   [ -n "$d" ] && [ ! -f "$d/scripts/ste_check.py" ] && need "ste_check.py" "reinstall simplified-technical-english; scripts/ste_check.py is missing"
 fi
 
+if for_stage implement; then
+  git rev-parse --verify -q refs/remotes/origin/HEAD >/dev/null 2>&1 || warn "refs/remotes/origin/HEAD is missing; run: git remote set-head origin -a (the security review diffs against it)"
+fi
+
 # MCP servers: none are required. Report GitHub-related ones so the user knows gh is used instead.
 if command -v claude >/dev/null && [ "${GH_ISSUE_WORKFLOW_SKIP_MCP:-}" != 1 ]; then
   m=$(timeout 20 claude mcp list 2>/dev/null | grep -iE 'github' | cut -d: -f1 | tr '\n' ',' || true)
