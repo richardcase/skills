@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 # Shared helpers for gh-issue-workflow scripts. Source it; do not run it.
 
+# Evals (claude plugin eval) can only set EVAL_* variables, so EVAL_HERDR_ENV
+# stands in for HERDR_ENV there. Nothing else reads it.
+[ -z "${HERDR_ENV:-}" ] && [ -n "${EVAL_HERDR_ENV:-}" ] && export HERDR_ENV="$EVAL_HERDR_ENV"
+
 # Directories that can hold installed skills. Override with a colon-separated
 # GH_ISSUE_WORKFLOW_SKILL_DIRS for tests.
 skill_dirs() {

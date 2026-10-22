@@ -3,6 +3,7 @@
 # Shows a Herdr notification. Events that need the user get the "request"
 # sound; completions get "done". A no-op (exit 0) outside Herdr.
 set -u
+here="$(cd "$(dirname "$0")" && pwd)"; . "$here/lib.sh"
 event="${1:?event}"; title="${2:?title}"; body="${3:-}"
 case "$event" in
   gate|escalation|ci-red|preflight-fail) sound=request;;

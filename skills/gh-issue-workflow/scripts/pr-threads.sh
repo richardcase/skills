@@ -20,9 +20,9 @@ case "$cmd" in
           reviews(first:50){ nodes{ databaseId author{login} state body url submittedAt } }
         } } }' \
     | jq --argjson since "$since" '.data.repository.pullRequest
-        | {unresolved_threads: [.reviewThreads.nodes[] | select(.isResolved|not)],
-           new_comments: [.comments.nodes[] | select(.databaseId > $since)],
-           new_reviews: [.reviews.nodes[] | select(.databaseId > $since) | select(.body != "" or .state == "CHANGES_REQUESTED")]}';;
+        | {unresolved_threads: [.reviewThreads.nodes[]? | select(.isResolved|not)],
+           new_comments: [.comments.nodes[]? | select(.databaseId > $since)],
+           new_reviews: [.reviews.nodes[]? | select(.databaseId > $since) | select(.body != "" or .state == "CHANGES_REQUESTED")]}';;
   reply)
     pr="${1:?pr number}"; cid="${2:?review comment database id}"; file="${3:?body file}"
     gh api "repos/$owner/$name/pulls/$pr/comments/$cid/replies" -F body=@"$file" --jq '.html_url';;
