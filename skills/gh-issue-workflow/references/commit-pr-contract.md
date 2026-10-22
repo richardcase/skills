@@ -52,7 +52,7 @@ Body, in this order, written to `$STATE_DIR/pr-body.md`:
 
 ## Reviews
 - Plan: Claude reviewer <n> findings. Codex <r> rounds.
-- Code: Codex <r> rounds.
+- Code: Codex <r> rounds. Standards <n> findings (<f> fixed, <b> rebutted). Security <n> findings (<f> fixed, <b> rebutted).
 
 Counts come from `state.json` (rounds) and the review files in `STATE_DIR` (`plan-review-claude.md`, `codex-*-dispositions.md`). A review that did not run is written as "not run", never as 0.
 

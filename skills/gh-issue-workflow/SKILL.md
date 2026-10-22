@@ -34,7 +34,7 @@ The stage word is optional and forces a stage. Without it, the stage is detected
 | PR open, approved, merge state CLEAN or UNSTABLE | merge |
 | PR open | feedback |
 | no PR, abandoned comment present | done |
-| no PR, on `issue-N`, plan comment, code review passed | pr |
+| no PR, on `issue-N`, plan comment, codex, standards, and security reviews done | pr |
 | no PR, on `issue-N`, plan comment | implement |
 | no PR, on `issue-N`, no plan comment | plan |
 | not on `issue-N`, inside Herdr | start |
@@ -46,7 +46,8 @@ The stage word is optional and forces a stage. Without it, the stage is detected
 - The launcher (`start`) assigns, creates the worktree, starts the worker, and hands off by naming this skill. It never plans.
 - Branch is `issue-N`. Worktree and state live where `references/stages.md` says.
 - Grilling is mandatory in `plan`, however small the issue.
-- Review loops cap at 3 rounds, then the user decides. See `references/review-loops.md`.
+- Review loops cap at 3 rounds, then the user decides. See `references/review-loops.md`. After the codex code loop passes, a standards review and a security review run once each; their fixes are new commits and do not re-open the codex loop.
+- A progress comment on the issue lists the plan tasks and is ticked as each one lands.
 - Two gates where the worker ends its turn and waits for "go": after the plan comment, and before push plus `gh pr create`.
 - Every gate, escalation, and completion calls `scripts/notify.sh`; outside Herdr it is a no-op.
 - Merge is a merge commit with `--match-head-commit` after a "go" gate. Abandon is a gate, then cleanup that keeps the remote branch.
@@ -77,6 +78,9 @@ The stage word is optional and forces a stage. Without it, the stage is detected
 | "CI is flaky, one more push" | Two attempts. Then notify and stop. |
 | "Clean everything up includes the remote branch" | The remote branch stays. Everything else goes, after the gate. |
 | "It is my branch, I can force-push the rebase" | Only after "go". `--force-with-lease`, never `--force`. |
+| "I'll amend so it stays one signed commit" | Fixes are new commits on top. Never amend after codex has seen the commit. |
+| "Codex has not seen what will ship, one more round" | The standards and security fixes do not re-open the codex loop. |
+| "The reviewer says it is out of scope, so I'll delete it" | `plan.md` defines scope. Planned work stays and the finding is rebutted; make it safe instead. |
 
 ## Files
 

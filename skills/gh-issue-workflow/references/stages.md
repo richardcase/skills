@@ -70,6 +70,7 @@ Use only the commands written here. Read every id and path from the JSON a comma
 
 ## implement (worker)
 
+0. Progress comment, once: `bash "$SKILL_DIR/scripts/progress.sh" post "$STATE_DIR/plan.md"` (skip when `state.progress_comment_id` is set). After each task commit: `progress.sh tick <k> <sha>`.
 1. Preflight `implement`. `state.sh stamp implement_started` on the first entry. Plan from `$STATE_DIR/plan.md`; if missing, recover the last plan comment:
    ```bash
    gh issue view "$URL" --json comments --jq '[.comments[].body | select(startswith("<!-- gh-issue-workflow: plan"))] | last'
@@ -78,7 +79,10 @@ Use only the commands written here. Read every id and path from the JSON a comma
 3. REQUIRED SUB-SKILL `superpowers:executing-plans`. One commit per plan task, message per `references/commit-pr-contract.md`, committed with `git commit -F`.
 4. REQUIRED SUB-SKILL `superpowers:verification-before-completion`. Run the repo's test and lint commands; keep the output for the PR body.
 5. Codex code loop: `references/review-loops.md`, KIND `code`. Commit fixes per the contract.
-6. On pass: `state.code_review.result = "pass"`, `state.stage = "pr"`. Continue to `pr` in the same turn.
+5b. Standards review, one pass. Find the standards files: `ls CONTRIBUTING.md CODING_STANDARDS.md STYLE*.md CLAUDE.md AGENTS.md 2>/dev/null; find docs -iname '*standard*' 2>/dev/null`. Dispatch one `Agent` subagent (general-purpose, fresh context) with `prompts/standards-reviewer-agent.md` filled in (`{WORKTREE_PATH}`, `{BASE}` as `origin/$BASE`, `{STANDARDS_FILES}`). Save the report to `$STATE_DIR/standards-review.md`. Dispositions in `$STATE_DIR/standards-review-dispositions.md`, same lines as the codex loop: fix `blocking` and `should`, or rebut with evidence; `nit` may be deferred. Record `state.standards_review = {result, findings: {total, fixed, rebutted}}`.
+5c. Security review, one pass. `git rev-parse --verify -q refs/remotes/origin/HEAD >/dev/null || git remote set-head origin -a`. Invoke the `security-review` skill; it diffs the current working directory against `origin/HEAD`, and the worker runs in the issue worktree, so that is the issue branch. Save its report to `$STATE_DIR/security-review.md`. Map each `# Vuln` block to a finding: Severity High is `blocking`, Medium is `should`. Dispositions in `$STATE_DIR/security-review-dispositions.md`; fix or rebut with evidence. Record `state.security_review = {result, findings: {total, fixed, rebutted}}`.
+   Rules for 5b and 5c: a fix is a new commit per the contract, never an amend. Re-run the tests after the fixes. Do not re-open the codex loop; the codex result stands. A scope finding ("this is not part of the issue") is checked against `plan.md`: work the plan asked for stays, and the finding is rebutted with the plan task as evidence; work the plan did not ask for is removed. A security finding on planned work is fixed by making the work safe, not by deleting the work.
+6. When the codex result is pass and both reviews are recorded: `state.sh set .stage '"pr"'`. Continue to `pr` in the same turn. Detection returns `pr` only when all three results exist, so a re-entry after the codex pass still runs 5b and 5c.
 
 ## pr (worker)
 
@@ -91,7 +95,7 @@ Use only the commands written here. Read every id and path from the JSON a comma
    gh pr create --base "$BASE" --head "issue-$N" --title "$TITLE" --body-file "$STATE_DIR/pr-body.md"
    gh pr view --json url,isDraft,state,body -q '{url,isDraft,state,closes:(.body|test("Closes #'"$N"'"))}'
    ```
-   Expect `isDraft: false` and `closes: true`.
+   Expect `isDraft: false` and `closes: true`. `progress.sh link <pr url>`.
 4b. CI watch: `bash "$SKILL_DIR/scripts/ci-watch.sh" "$PR"`. See "CI watch" below. A red result after the cap ends the turn.
 5. `state.sh set .stage '"feedback"'`, `state.sh stamp pr_opened`, `notify.sh pr-opened "issue $N: PR opened" "<pr url>"`. Report the URL. End the turn.
 
