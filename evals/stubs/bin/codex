@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# fixture stub for codex: logs calls; always returns one blocking finding
+log="${EVAL_FIXTURE_LOG:-$PWD/calls.log}"; printf 'codex %s\n' "$*" >> "$log"
+[ "$1 $2" = "login status" ] && { echo "Logged in using ChatGPT"; exit 0; }
+out=""; prev=""; for a in "$@"; do case "$prev" in -o|--output-last-message) out="$a";; esac; prev="$a"; done
+cat /dev/stdin >/dev/null 2>&1 || true
+msg='## Findings
+### F1: Off-by-one fix has no regression test for the empty file case
+- severity: blocking
+- location: test.sh
+- claim: An empty widgets file is not covered, and grep -c on an empty file returns 1 with exit status 1.
+- evidence: test.sh only checks a 3 line file.
+## Verdict: FAIL'
+if [ -n "$out" ]; then printf '%s\n' "$msg" > "$out"; else printf '%s\n' "$msg"; fi

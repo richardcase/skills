@@ -14,6 +14,7 @@ One issue URL in, a merged PR and a retro out. The process is a state machine wh
 /gh-issue-workflow abandon <url>    # explicit only; gated
 /gh-issue-workflow status <url>     # read-only report
 /gh-issue-workflow list             # read-only: every issue-N worktree of this repo
+/gh-issue-workflow metrics          # read-only: counts and medians across issues (scripts/metrics.sh summary)
 ```
 
 The stage word is optional and forces a stage. Without it, the stage is detected. `status` and `list` never mutate anything.
@@ -48,6 +49,7 @@ The stage word is optional and forces a stage. Without it, the stage is detected
 - Grilling is mandatory in `plan`, however small the issue.
 - Review loops cap at 3 rounds, then the user decides. See `references/review-loops.md`. After the codex code loop passes, a standards review and a security review run once each; their fixes are new commits and do not re-open the codex loop.
 - A progress comment on the issue lists the plan tasks and is ticked as each one lands.
+- Retro and abandon append one line to `~/.local/share/gh-issue-workflow/metrics.jsonl`; `metrics` summarises it.
 - Two gates where the worker ends its turn and waits for "go": after the plan comment, and before push plus `gh pr create`.
 - Every gate, escalation, and completion calls `scripts/notify.sh`; outside Herdr it is a no-op.
 - Merge is a merge commit with `--match-head-commit` after a "go" gate. Abandon is a gate, then cleanup that keeps the remote branch.
