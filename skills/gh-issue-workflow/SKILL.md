@@ -11,9 +11,11 @@ One issue URL in, a merged PR and a retro out. The process is a state machine wh
 
 ```
 /gh-issue-workflow https://github.com/<owner>/<repo>/issues/<N> [start|plan|implement|pr|feedback|retro]
+/gh-issue-workflow status <url>     # read-only: stage, facts, open items (scripts/status.sh)
+/gh-issue-workflow list             # read-only: every issue-N worktree of this repo (scripts/list.sh)
 ```
 
-The stage word is optional and forces a stage. Without it, the stage is detected.
+The stage word is optional and forces a stage. Without it, the stage is detected. `status` and `list` never mutate anything and skip the stage checklist.
 
 ## Every invocation
 
@@ -43,6 +45,7 @@ The stage word is optional and forces a stage. Without it, the stage is detected
 - Grilling is mandatory in `plan`, however small the issue.
 - Review loops cap at 3 rounds, then the user decides. See `references/review-loops.md`.
 - Two gates where the worker ends its turn and waits for "go": after the plan comment, and before push plus `gh pr create`.
+- Every gate, escalation, and completion calls `scripts/notify.sh` so the user hears it from Herdr. Outside Herdr the call is a no-op.
 - Commits and PR follow `references/commit-pr-contract.md`: signed, conventional, STE body, no agent footers, `Closes #N` only in the PR body, PR ready for review.
 - Codex runs as `codex exec ... -m gpt-6-sol -c model_reasoning_effort="medium"` with a read-only sandbox.
 
@@ -68,4 +71,4 @@ The stage word is optional and forces a stage. Without it, the stage is detected
 - `references/review-loops.md`: codex loop, dispositions, escalation.
 - `references/commit-pr-contract.md`: commit, PR, comment templates and markers.
 - `prompts/`: handoff text, plan reviewer brief, codex prompts.
-- `scripts/`: `preflight.sh`, `detect-stage.sh`, `check-commits.sh`, `pr-threads.sh`, `ste-check.sh`.
+- `scripts/`: `preflight.sh`, `detect-stage.sh`, `status.sh`, `list.sh`, `state.sh`, `notify.sh`, `check-commits.sh`, `pr-threads.sh`, `ste-check.sh`.

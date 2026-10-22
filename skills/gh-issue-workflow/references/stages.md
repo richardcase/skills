@@ -8,6 +8,10 @@ Every stage starts with:
 bash "$SKILL_DIR/scripts/preflight.sh" <stage>     # stop on exit 1; print each item and its fix
 ```
 
+On a failed preflight in a worker stage, also run `bash "$SKILL_DIR/scripts/notify.sh" preflight-fail "issue $N: preflight failed" "<missing items>"` before you end the turn.
+
+State helpers: `bash "$SKILL_DIR/scripts/state.sh" set .stage '"pr"'`, `state.sh stamp <event>` (writes `timestamps.<event>`), `state.sh get .code_review.result`.
+
 Use only the commands written here. Read every id and path from the JSON a command returns. Do not add flags you have not seen in this file or in `--help`.
 
 ## start (launcher: the pane the user is in)
@@ -35,7 +39,7 @@ Use only the commands written here. Read every id and path from the JSON a comma
    ```bash
    SD="$(git -C "$WT_PATH" rev-parse --git-dir)/gh-issue-workflow"; mkdir -p "$SD"
    jq -n --arg url "$URL" --arg owner "$OWNER" --arg repo "$REPO" --argjson n "$N" --arg base "$BASE" --arg root "$REPO_ROOT" \
-     '{issue_url:$url,owner:$owner,repo:$repo,number:$n,base:$base,branch:("issue-"+($n|tostring)),repo_root:$root,stage:"plan",plan_review:{round:0,result:null},code_review:{round:0,result:null},last_pr_comment_id:0}' > "$SD/state.json"
+     '{issue_url:$url,owner:$owner,repo:$repo,number:$n,base:$base,branch:("issue-"+($n|tostring)),repo_root:$root,stage:"plan",plan_review:{round:0,result:null},code_review:{round:0,result:null},last_pr_comment_id:0,timestamps:{start:(now|todate)}}' > "$SD/state.json"
    ```
 9. Start the worker:
    ```bash
@@ -48,7 +52,7 @@ Use only the commands written here. Read every id and path from the JSON a comma
     herdr agent read "issue-$N" --source recent-unwrapped --lines 40
     ```
     The handoff names the skill; it does not restate the process. The worker loads the skill itself.
-11. Report: workspace label and id, worktree path, agent name. Stop. The launcher never plans and never closes anything.
+11. When the `agent read` output shows the worker's first grilling question, `bash "$SKILL_DIR/scripts/notify.sh" worker-ready "issue $N: worker ready" "First grilling question is waiting in workspace <label>"`. Report: workspace label and id, worktree path, agent name. Stop. The launcher never plans and never closes anything.
 
 ## plan (worker)
 
@@ -61,12 +65,12 @@ Use only the commands written here. Read every id and path from the JSON a comma
    ```bash
    gh issue comment "$URL" --body-file "$STATE_DIR/plan-comment.md"
    ```
-   Set `state.stage = "implement"`.
-7. Gate. Print the comment URL and end the turn with: "Plan posted. Say go to implement." Do not start implementing in this turn.
+   `state.sh set .stage '"implement"'`, `state.sh stamp plan_posted`, then `notify.sh plan-posted "issue $N: plan posted" "<comment url>"`.
+7. Gate. `notify.sh gate "issue $N: plan needs your go" "Plan posted at <comment url>. Say go to implement."` Print the comment URL and end the turn with: "Plan posted. Say go to implement." Do not start implementing in this turn.
 
 ## implement (worker)
 
-1. Preflight `implement`. Plan from `$STATE_DIR/plan.md`; if missing, recover the last plan comment:
+1. Preflight `implement`. `state.sh stamp implement_started` on the first entry. Plan from `$STATE_DIR/plan.md`; if missing, recover the last plan comment:
    ```bash
    gh issue view "$URL" --json comments --jq '[.comments[].body | select(startswith("<!-- gh-issue-workflow: plan"))] | last'
    ```
@@ -80,7 +84,7 @@ Use only the commands written here. Read every id and path from the JSON a comma
 
 1. Preflight `pr`. `bash "$SKILL_DIR/scripts/check-commits.sh" "origin/$BASE"` prints `OK`. Fix with `git commit --amend -F` or an interactive-free rebase otherwise.
 2. Write `$STATE_DIR/pr-body.md` from the PR recipe. `ste-check.sh descriptive` on it: exit 0.
-3. Gate. Show `git log --format='%h %G? %s' "origin/$BASE..HEAD"`, the title, and the body. End the turn with: "Say go to push and open the PR." Edits requested here go back to step 2.
+3. Gate. Show `git log --format='%h %G? %s' "origin/$BASE..HEAD"`, the title, and the body. `notify.sh gate "issue $N: PR needs your go" "<title>. Say go to push and open the PR."` End the turn with: "Say go to push and open the PR." Edits requested here go back to step 2.
 4. On go:
    ```bash
    git push -u origin "issue-$N"
@@ -88,7 +92,7 @@ Use only the commands written here. Read every id and path from the JSON a comma
    gh pr view --json url,isDraft,state,body -q '{url,isDraft,state,closes:(.body|test("Closes #'"$N"'"))}'
    ```
    Expect `isDraft: false` and `closes: true`.
-5. `state.stage = "feedback"`. Report the URL. End the turn.
+5. `state.sh set .stage '"feedback"'`, `state.sh stamp pr_opened`, `notify.sh pr-opened "issue $N: PR opened" "<pr url>"`. Report the URL. End the turn.
 
 ## feedback (worker, on re-invoke)
 
@@ -107,7 +111,7 @@ Use only the commands written here. Read every id and path from the JSON a comma
    ```bash
    gh pr edit "$PR" --add-reviewer <login>
    ```
-7. Set `last_pr_comment_id` to the highest `databaseId` seen. Report a table: item, action (fixed in `<sha>`, resolved | rebutted, reply URL, open).
+7. Set `last_pr_comment_id` to the highest `databaseId` seen. `notify.sh feedback-done "issue $N: feedback handled" "<k> fixed, <r> rebutted"`. Report a table: item, action (fixed in `<sha>`, resolved | rebutted, reply URL, open).
 
 ## retro (any pane)
 
@@ -116,7 +120,7 @@ Use only the commands written here. Read every id and path from the JSON a comma
    gh pr view "$PR" --json number,state,mergedAt,closedAt,reviews,comments,commits
    ```
    plus round counts from `state.json` and the disposition files.
-2. Write `$STATE_DIR/retro.md` from the retro template. STE gate on the prose lines. `gh issue comment "$URL" --body-file "$STATE_DIR/retro.md"`.
+2. Write `$STATE_DIR/retro.md` from the retro template. STE gate on the prose lines. `gh issue comment "$URL" --body-file "$STATE_DIR/retro.md"`. `state.sh stamp retro`, `notify.sh retro-posted "issue $N: retro posted" "<comment url>"`.
 3. Repo lessons to memory. Target the main clone's project memory, not the worktree's:
    ```bash
    MAIN=$(dirname "$(git rev-parse --git-common-dir)")

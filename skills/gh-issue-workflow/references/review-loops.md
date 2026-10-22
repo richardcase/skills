@@ -62,7 +62,7 @@ A rebuttal cites something the next reviewer can check. "I disagree" is not a di
 ## Exit rules
 
 - **pass:** after dispositions, no `blocking` finding is open. Set `state.<KIND>_review.result = "pass"`.
-- **escalated:** round is 3 and a `blocking` finding is still open. Write `$STATE_DIR/escalation.md` with, per open finding: the reviewer's claim, your position, and a recommended decision. Show it to the user and ask for a decision per finding. Their decisions become dispositions. No further rounds unless they ask.
+- **escalated:** round is 3 and a `blocking` finding is still open. Write `$STATE_DIR/escalation.md` with, per open finding: the reviewer's claim, your position, and a recommended decision. Run `bash "$SKILL_DIR/scripts/notify.sh" escalation "issue $N: review escalation" "<count> blocking finding(s) open after 3 rounds"`. Show it to the user and ask for a decision per finding. Their decisions become dispositions. No further rounds unless they ask.
 - otherwise: fix (edit `plan.md`, or commit code changes per the contract) and start the next round.
 
 A `blocking` finding is open when it is not fixed and either not rebutted, or re-raised by codex after a rebuttal. The second case stops you from certifying your own rebuttal: a rebuttal codex rejects is the user's call.
