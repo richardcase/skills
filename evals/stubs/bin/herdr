@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# fixture stub for herdr: logs calls; worktree create makes a real git worktree
+log="${EVAL_FIXTURE_LOG:-$PWD/calls.log}"; printf 'herdr %s\n' "$*" >> "$log"
+F="$PWD"
+getopt_val() { local k="$1"; shift; while [ $# -gt 0 ]; do [ "$1" = "$k" ] && { echo "$2"; return; }; shift; done; }
+case "$1 $2" in
+  "worktree list")
+    extra=""; wt="${FIXTURE_WT_ROOT:-$PWD/worktrees}/issue-7"
+    [ -d "$wt" ] && extra=',{"branch":"issue-7","path":"'"$wt"'","open_workspace_id":"w9","label":"widgets issue 7","is_linked_worktree":true}'
+    echo '{"id":"cli:worktree:list","result":{"type":"worktree_list","worktrees":[{"branch":"main","path":"'"${FIXTURE_REPO:-$PWD}"'","open_workspace_id":"w1","label":"widgets","is_linked_worktree":false}'"$extra"']}}';;
+  "worktree create")
+    cwd=$(getopt_val --cwd "$@"); br=$(getopt_val --branch "$@"); base=$(getopt_val --base "$@"); label=$(getopt_val --label "$@")
+    path="${FIXTURE_WT_ROOT:-$PWD/worktrees}/$br"
+    git -C "${cwd:-${FIXTURE_REPO:-$PWD}}" worktree add -q -b "$br" "$path" "${base:-main}" 2>/dev/null || { echo '{"error":{"code":"worktree_create_failed"}}' >&2; exit 1; }
+    echo '{"id":"cli:worktree:create","result":{"type":"worktree_created","workspace":{"workspace_id":"w9","label":"'"$label"'","cwd":"'"$path"'"},"tab":{"tab_id":"w9:t1"},"root_pane":{"pane_id":"w9:p1"},"worktree":{"branch":"'"$br"'","path":"'"$path"'"}}}';;
+  "agent start") echo '{"id":"cli:agent:start","result":{"type":"agent_started","agent":{"name":"'"$3"'","pane_id":"w9:p1","kind":"claude","status":"idle"}}}';;
+  "agent prompt") echo '{"id":"cli:agent:prompt","result":{"type":"agent_prompt","status":"idle"}}';;
+  "agent read") echo "Checks ok. Issue 7 loaded. Round 1 of questions: Q1 ...";;
+  "agent list") echo '{"result":{"agents":[]}}';;
+  "pane split") echo '{"result":{"pane":{"pane_id":"w1:p2"}}}';;
+  *) echo '{"result":{}}';;
+esac

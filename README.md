@@ -74,6 +74,18 @@ npm run check
 
 `npm run check` validates skill metadata, confirms that the Skills CLI discovers the catalog, validates the Claude Code plugin, and checks that release versions remain synchronized.
 
+## Evals
+
+The `gh-issue-workflow` skill has an eval suite under `evals/`. Each case is a `prompt.md` with `graders/`, in the `claude plugin eval` layout. The cases drive stub `gh`, `herdr`, and `codex` binaries from `evals/stubs/`, and `claude plugin eval` does not let a case put stubs on PATH, so the suite runs through a local runner that uses `claude -p`. It makes real model calls on your account, so it is local only:
+
+```sh
+npm run eval            # all cases
+npm run eval:nocodex    # the preflight case with codex hidden
+npm run eval:plugin     # the same cases under claude plugin eval (stubs are not on PATH there)
+```
+
+The runner scores the regex graders and prints the LLM graders for you to judge. Each case leaves its workspace, reply, and `calls.log` in a temp directory that the output names. Results of `eval:plugin` land in `evals/results/` (ignored by git).
+
 ## Release
 
 User-facing skill and plugin changes should include a Changeset:
