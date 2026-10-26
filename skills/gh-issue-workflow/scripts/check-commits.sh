@@ -10,7 +10,7 @@ types="${GH_ISSUE_WORKFLOW_TYPES:-feat|fix|docs|test|refactor|chore|ci|build|per
 subject_re="^($types)(\([A-Za-z0-9._/-]+\))?!?: [^ ].*[^.]$"
 fail=0
 problem() { echo "FAIL $1: $2"; fail=1; }
-for sha in $(git rev-list --reverse "$base..HEAD"); do
+for sha in $(git rev-list --reverse --no-merges "$base..HEAD"); do
   short=$(git rev-parse --short "$sha")
   subject=$(git log -1 --format=%s "$sha")
   body=$(git log -1 --format=%b "$sha")
@@ -23,5 +23,5 @@ for sha in $(git rev-list --reverse "$base..HEAD"); do
   if ! $allow_dco && grep -qiE '^signed-off-by:' <<<"$body"; then problem "$short" "Signed-off-by trailer present; pass --allow-dco only when the repo requires DCO"; fi
   if grep -qE '(^|[^a-z])(closes|fixes|resolves) #[0-9]+' <<<"$(tr 'A-Z' 'a-z' <<<"$subject $body")"; then problem "$short" "issue reference in the commit; put Closes #N in the PR body only"; fi
 done
-[ $fail -eq 0 ] && echo "OK $(git rev-list --count "$base..HEAD") commit(s) in $base..HEAD pass the contract"
+[ $fail -eq 0 ] && echo "OK $(git rev-list --count --no-merges "$base..HEAD") commit(s) in $base..HEAD pass the contract"
 exit $fail

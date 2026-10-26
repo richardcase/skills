@@ -50,14 +50,10 @@ Body, in this order, written to `$STATE_DIR/pr-body.md`:
 ## Tests
 - `<command>`: <result>
 
-## Reviews
-- Plan: Claude reviewer <n> findings. Codex <r> rounds.
-- Code: Codex <r> rounds. Standards <n> findings (<f> fixed, <b> rebutted). Security <n> findings (<f> fixed, <b> rebutted).
-
-Counts come from `state.json` (rounds) and the review files in `STATE_DIR` (`plan-review-claude.md`, `codex-*-dispositions.md`). A review that did not run is written as "not run", never as 0.
-
 Closes #N
 ```
+
+No Reviews section: the review counts live in the plan comment and the retro comment on the issue.
 
 Create it ready for review:
 
@@ -78,15 +74,17 @@ Line 1 of the comment, always:
 
 ## Plan comment
 
+A summary, not the plan. The full plan stays in `$STATE_DIR/plan.md` and is opened in VS Code at the plan gate.
+
 ```
 <!-- gh-issue-workflow: plan v1 branch=issue-N -->
 ## Plan for #N
 <one STE paragraph: the approach, in 3 to 5 sentences; this paragraph is gated by ste-check>
 
-<the plan, as written to plan.md>
-
 **Reviews:** Claude reviewer <n> findings (<f> fixed, <b> rebutted). Codex <r> rounds (<f> fixed, <b> rebutted, <d> deferred).
 ```
+
+Counts come from `state.json` (rounds) and the review files in `STATE_DIR` (`plan-review-claude.md`, `codex-*-dispositions.md`). A review that did not run is written as "not run", never as 0.
 
 ## Retro comment
 

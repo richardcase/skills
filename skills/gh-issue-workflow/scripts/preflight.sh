@@ -17,6 +17,9 @@ if for_stage start abandon; then
   command -v herdr >/dev/null || need "binary herdr" "install Herdr and run this from a Herdr pane"
   [ "${HERDR_ENV:-}" = 1 ] || need "HERDR_ENV=1" "run this stage from a pane inside Herdr"
 fi
+if for_stage plan; then
+  command -v code >/dev/null || need "binary code" "install VS Code and its 'code' command; the plan opens in it at the plan gate"
+fi
 if for_stage plan implement; then
   if command -v codex >/dev/null; then
     codex login status >/dev/null 2>&1 || [ -f "$HOME/.codex/auth.json" ] || need "codex login" "run: codex login"

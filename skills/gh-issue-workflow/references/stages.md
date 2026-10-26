@@ -62,20 +62,17 @@ Use only the commands written here. Read every id and path from the JSON a comma
 3. REQUIRED SUB-SKILL `superpowers:writing-plans`. Save the plan to `$STATE_DIR/plan.md`, not under `docs/`, so it never lands in the PR.
 4. Claude review. Dispatch one `Agent` subagent (general-purpose, fresh context) with `prompts/plan-reviewer-agent.md` filled in (`{ISSUE_URL}`, `{PLAN_PATH}`, `{WORKTREE_PATH}`). Save its report to `$STATE_DIR/plan-review-claude.md`. Fix every `blocking` and `should` finding in `plan.md`, or rebut with evidence; write dispositions under the report. Record the counts: `state.plan_review.claude_findings = {total, fixed, rebutted}`.
 5. Codex plan loop: `references/review-loops.md`, KIND `plan`.
-6. Post the plan. Build `$STATE_DIR/plan-comment.md` from the template in `references/commit-pr-contract.md`. The Reviews line takes its counts from `state.json` and the disposition files. Gate the summary paragraph: write it alone to a file and run `ste-check.sh descriptive`; fix until exit 0. Run the checker on the whole comment too and report its output, but do not block on it. Then:
+6. Post the plan summary. Build `$STATE_DIR/plan-comment.md` from the plan comment template in `references/commit-pr-contract.md`: the marker, one summary paragraph, and the Reviews line. The plan body does not go in the comment. The Reviews line takes its counts from `state.json` and the disposition files. Gate the summary paragraph: write it alone to a file and run `ste-check.sh descriptive`; fix until exit 0. Then:
    ```bash
    gh issue comment "$URL" --body-file "$STATE_DIR/plan-comment.md"
    ```
    `state.sh set .stage '"implement"'`, `state.sh stamp plan_posted`, then `notify.sh plan-posted "issue $N: plan posted" "<comment url>"`.
-7. Gate. `notify.sh gate "issue $N: plan needs your go" "Plan posted at <comment url>. Say go to implement."` Print the comment URL and end the turn with: "Plan posted. Say go to implement." Do not start implementing in this turn.
+7. Gate. Open the full plan for the user: `code "$STATE_DIR/plan.md"`. `notify.sh gate "issue $N: plan needs your go" "Summary posted at <comment url>. The plan is open in VS Code. Say go to implement."` Print the comment URL and end the turn with: "Plan summary posted. The plan is open in VS Code. Say go to implement." Do not start implementing in this turn.
 
 ## implement (worker)
 
 0. Progress comment, once: `bash "$SKILL_DIR/scripts/progress.sh" post "$STATE_DIR/plan.md"` (skip when `state.progress_comment_id` is set). After each task commit: `progress.sh tick <k> <sha>`.
-1. Preflight `implement`. `state.sh stamp implement_started` on the first entry. Plan from `$STATE_DIR/plan.md`; if missing, recover the last plan comment:
-   ```bash
-   gh issue view "$URL" --json comments --jq '[.comments[].body | select(startswith("<!-- gh-issue-workflow: plan"))] | last'
-   ```
+1. Preflight `implement`. `state.sh stamp implement_started` on the first entry. Plan from `$STATE_DIR/plan.md`. If the file is missing, the plan is gone: the issue comment holds only the summary. Stop and ask whether to run the `plan` stage again.
 2. Signing check: `git config --get commit.gpgsign` prints `true`. After the first commit, `git log -1 --format='%h %G? %s'` shows `G` or `U`. See the contract for the pinentry case. Never `--no-gpg-sign`.
 3. REQUIRED SUB-SKILL `superpowers:executing-plans`. One commit per plan task, message per `references/commit-pr-contract.md`, committed with `git commit -F`.
 4. REQUIRED SUB-SKILL `superpowers:verification-before-completion`. Run the repo's test and lint commands; keep the output for the PR body.

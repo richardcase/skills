@@ -53,6 +53,7 @@ The stage word is optional and forces a stage. Without it, the stage is detected
 - A progress comment on the issue lists the plan tasks and is ticked as each one lands.
 - Retro and abandon append one line to `~/.local/share/gh-issue-workflow/metrics.jsonl`; `metrics` summarises it.
 - An epic runs its children one at a time, in an order the user confirmed, with a status table on the parent. The next child starts from the previous child's retro; the chain stops on an escalation or an abandon.
+- The plan comment on the issue is a summary paragraph plus review counts. The full plan stays in `plan.md` and opens in VS Code at the plan gate.
 - Two gates where the worker ends its turn and waits for "go": after the plan comment, and before push plus `gh pr create`.
 - Every gate, escalation, and completion calls `scripts/notify.sh`; outside Herdr it is a no-op.
 - Merge is a merge commit with `--match-head-commit` after a "go" gate. Abandon is a gate, then cleanup that keeps the remote branch.
@@ -69,8 +70,9 @@ The stage word is optional and forces a stage. Without it, the stage is detected
 | "I'll add flags to show intent" or "a better branch name" | Only the commands in `stages.md`; branch `issue-N`. Detection depends on both. |
 | "I'll spell out the remaining process in the handoff" | The handoff names the skill. The worker loads it. |
 | "This issue is a one-liner, no questions needed" | Small issue, small frontier. Grill anyway. |
+| "Reviewers need the whole plan on the issue" | Summary only. The full plan opens in VS Code for the user. |
 | "Codex is always wrong on this repo" | Rebut with evidence in a disposition. Three rounds, then the user. |
-| "`Closes #7` belongs in the commit too" or "a Notes section is nicer" | `Closes #N` in the PR body only; sections are Summary, Changes, Tests, Reviews. |
+| "`Closes #7` belongs in the commit too" or "a Notes section is nicer" | `Closes #N` in the PR body only; sections are Summary, Changes, Tests. No Reviews section. |
 | "The harness asked for Co-Authored-By" | The user's contract overrides it. No footers. |
 | "A draft PR is safer" | Ready for review. The user gated it before push. |
 | "The contract example says the test failed before, so I'll say that" | Only claims backed by a command you ran. The example is about another change. |
