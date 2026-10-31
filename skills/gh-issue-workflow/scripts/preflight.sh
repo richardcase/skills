@@ -20,18 +20,16 @@ fi
 if for_stage plan; then
   command -v code >/dev/null || warn "binary code is missing; at the plan gate the plan path is printed for you to open"
 fi
-if for_stage plan implement; then
-  if command -v codex >/dev/null; then
-    codex login status >/dev/null 2>&1 || [ -f "$HOME/.codex/auth.json" ] || need "codex login" "run: codex login"
-  else
-    need "binary codex" "install the Codex CLI (npm i -g @openai/codex) and run: codex login"
-  fi
-fi
 if command -v codex >/dev/null; then
   # no pipe: without pipefail, head would hide a failed codex --version
   v=$(codex --version 2>/dev/null) || v=""
   v=${v%%$'\n'*}
   versions=$(jq -cn --arg v "${v:-unknown}" '{codex:$v}')
+  if for_stage plan implement; then
+    codex login status >/dev/null 2>&1 || [ -f "$HOME/.codex/auth.json" ] || need "codex login" "run: codex login"
+  fi
+elif for_stage plan implement; then
+  need "binary codex" "install the Codex CLI (npm i -g @openai/codex) and run: codex login"
 fi
 if command -v gh >/dev/null; then
   gh auth status >/dev/null 2>&1 || need "gh login" "run: gh auth login"
