@@ -74,7 +74,7 @@ Line 1 of the comment, always:
 
 ## Plan comment
 
-A summary, not the plan. The full plan stays in `$STATE_DIR/plan.md` and is opened in VS Code at the plan gate.
+A summary, not the plan. The full plan stays in `$STATE_DIR/plan.md` and is shown at the plan gate: opened in VS Code when `code` is installed, otherwise printed as a path for the user to review.
 
 ```
 <!-- gh-issue-workflow: plan v1 branch=issue-N -->

@@ -18,7 +18,7 @@ if for_stage start abandon; then
   [ "${HERDR_ENV:-}" = 1 ] || need "HERDR_ENV=1" "run this stage from a pane inside Herdr"
 fi
 if for_stage plan; then
-  command -v code >/dev/null || need "binary code" "install VS Code and its 'code' command; the plan opens in it at the plan gate"
+  command -v code >/dev/null || warn "binary code is missing; at the plan gate the plan path is printed for you to open"
 fi
 if for_stage plan implement; then
   if command -v codex >/dev/null; then
