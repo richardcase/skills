@@ -5,9 +5,10 @@
 # graders/*.md files as `claude plugin eval`, which cannot put stubs on PATH.
 # Regex graders on workspace files are scored here; tool_used and llm graders
 # are printed for manual review. EVAL_MODEL picks the model (default sonnet).
+# A case.yaml `skill:` line picks the skill (default gh-issue-workflow).
+# EVAL_NO_SKILL=1 runs the prompt without the skill, for a baseline.
 set -euo pipefail
 here="$(cd "$(dirname "$0")" && pwd)"; root="$(cd "$here/.." && pwd)"
-skill="$root/skills/gh-issue-workflow"
 model="${EVAL_MODEL:-sonnet}"
 if [ $# -gt 0 ]; then cases=("$@"); else
   mapfile -t cases < <(find "$here" -mindepth 2 -maxdepth 2 -name prompt.md -printf '%h\n' | xargs -n1 basename | sort)
@@ -18,6 +19,7 @@ pass=0; fail=0; manual=0
 for c in "${cases[@]}"; do
   dir="$here/$c"; [ -f "$dir/prompt.md" ] || { echo "no such case: $c" >&2; continue; }
   ws=$(mktemp -d "${TMPDIR:-/tmp}/giw-eval-$c.XXXX")
+  skill_name=$(awk '/^skill:/{print $2}' "$dir/case.yaml" 2>/dev/null); skill="$root/skills/${skill_name:-gh-issue-workflow}"
   # preflight-* cases hide codex: stubs without it, and a minimal PATH so the real one is not found
   stubs="$here/stubs/bin"; base_path="$PATH"
   case "$c" in preflight-*) stubs="$here/stubs/bin-nocodex"; base_path="$(dirname "$(command -v claude)"):/usr/local/bin:/usr/bin:/bin";; esac
@@ -28,7 +30,9 @@ for c in "${cases[@]}"; do
     (cd "$ws" && bash "$dir/$(grep scaffold_script "$dir/case.yaml" | awk '{print $2}')")
   fi
   envs=$(awk 'BEGIN{f=0} /^---$/{f++; next} f==1 && /^  EVAL_[A-Z0-9_]+:/ {gsub(/[ "]/,""); sub(":","="); print}' "$dir/prompt.md")
-  prompt="Read the skill at $skill/SKILL.md first and follow it exactly; treat it as an installed skill the user invoked. Its SKILL_DIR is $skill. Sandbox: the GitHub repo acme/widgets does not exist; gh, herdr, and codex are stub programs on PATH that print canned output and log their calls to ./calls.log. Stay inside the current directory. Set GH_ISSUE_WORKFLOW_SKIP_MCP=1 for the preflight.
+  load="Read the skill at $skill/SKILL.md first and follow it exactly; treat it as an installed skill the user invoked. Its SKILL_DIR is $skill. "
+  [ "${EVAL_NO_SKILL:-}" = 1 ] && load=""
+  prompt="${load}Sandbox: the GitHub repo acme/widgets does not exist; gh, herdr, and codex are stub programs on PATH that print canned output and log their calls to ./calls.log. Stay inside the current directory. Set GH_ISSUE_WORKFLOW_SKIP_MCP=1 for the preflight.
 
 $(body "$dir/prompt.md")"
   echo "== $c  (workspace $ws)"
