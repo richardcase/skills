@@ -67,7 +67,11 @@ Use only the commands written here. Read every id and path from the JSON a comma
    gh issue comment "$URL" --body-file "$STATE_DIR/plan-comment.md"
    ```
    `state.sh set .stage '"implement"'`, `state.sh stamp plan_posted`, then `notify.sh plan-posted "issue $N: plan posted" "<comment url>"`.
-7. Gate. Open the full plan for the user: `code "$STATE_DIR/plan.md"`. `notify.sh gate "issue $N: plan needs your go" "Summary posted at <comment url>. The plan is open in VS Code. Say go to implement."` Print the comment URL and end the turn with: "Plan summary posted. The plan is open in VS Code. Say go to implement." Do not start implementing in this turn.
+7. Gate. Show the full plan to the user. Run `command -v code` to choose how:
+   - `code` is installed: `code "$STATE_DIR/plan.md"`. `notify.sh gate "issue $N: plan needs your go" "Summary posted at <comment url>. The plan is open in VS Code. Say go to implement."` Print the comment URL and end the turn with: "Plan summary posted. The plan is open in VS Code. Say go to implement."
+   - `code` is missing: do not try to open the plan. `notify.sh gate "issue $N: plan needs your go" "Summary posted at <comment url>. Review the plan at <plan path>. Say go to implement."` Print the comment URL and the absolute path of `$STATE_DIR/plan.md`, and end the turn with: "Plan summary posted. Review the plan at `<plan path>`. Say go to implement."
+
+   Do not start implementing in this turn.
 
 ## implement (worker)
 
