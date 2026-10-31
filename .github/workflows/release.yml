@@ -35,6 +35,7 @@ jobs:
         with:
           version: npm run version
           publish: npm run release
+          commitMode: github-api
           createGithubReleases: true
           commit: "chore: version skills"
           title: "chore: version skills"
