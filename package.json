@@ -16,7 +16,10 @@
     "validate:plugin": "claude plugin validate .",
     "validate:skills": "node scripts/validate-skills.mjs",
     "validate:version": "node scripts/validate-version.mjs",
-    "version": "changeset version && node scripts/sync-plugin-version.mjs"
+    "version": "changeset version && node scripts/sync-plugin-version.mjs",
+    "eval": "bash evals/run-local.sh",
+    "eval:nocodex": "bash evals/run-local.sh preflight-stops-without-codex",
+    "eval:plugin": "claude plugin eval . --scaffold --allow-tools Bash --ablation none --runs 1 --trust-plugin"
   },
   "packageManager": "npm@10.9.4",
   "devDependencies": {
