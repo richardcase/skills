@@ -34,18 +34,26 @@ Plan review (prompt on stdin, plan and previous dispositions appended):
       -o "$STATE_DIR/codex-plan-r$round.md" -
 ```
 
-Code review (commit first; codex reviews the branch against the base):
+Code review (commit first; codex reviews the diff of the branch against the base, appended to the prompt):
 
 ```bash
-{ cat "$SKILL_DIR/prompts/codex-code-review.md"
-  if [ -f "$STATE_DIR/codex-code-r$((round-1))-dispositions.md" ]; then
-    echo; echo "# Previous dispositions"; cat "$STATE_DIR/codex-code-r$((round-1))-dispositions.md"; fi
-} > "$STATE_DIR/codex-code-r$round-prompt.md"
-codex exec review -m gpt-6-sol -c model_reasoning_effort="medium" --base "$BASE" \
-  "$(cat "$STATE_DIR/codex-code-r$round-prompt.md")" | tee "$STATE_DIR/codex-code-r$round.md"
+if git -C "$WT_PATH" fetch origin "$BASE" &&
+   git -C "$WT_PATH" diff "origin/$BASE...HEAD" > "$STATE_DIR/codex-code-r$round.diff" &&
+   [ -s "$STATE_DIR/codex-code-r$round.diff" ]; then
+  { cat "$SKILL_DIR/prompts/codex-code-review.md"
+    if [ -f "$STATE_DIR/codex-code-r$((round-1))-dispositions.md" ]; then
+      echo; echo "# Previous dispositions"; cat "$STATE_DIR/codex-code-r$((round-1))-dispositions.md"; fi
+    echo; echo "Base branch: origin/$BASE"; echo; echo '``````diff'
+    cat "$STATE_DIR/codex-code-r$round.diff"; echo '``````'
+  } > "$STATE_DIR/codex-code-r$round-prompt.md" &&
+  codex exec -m gpt-6-sol -c model_reasoning_effort="medium" -s read-only -C "$WT_PATH" --ephemeral \
+        -o "$STATE_DIR/codex-code-r$round.md" - < "$STATE_DIR/codex-code-r$round-prompt.md"
+else
+  echo "fetch or diff of origin/$BASE failed, or the diff is empty" >&2; false
+fi
 ```
 
-If `codex exec review` rejects a flag, run `codex exec review --help` once, adapt, and note the working form in the retro.
+If the block prints `fetch or diff of origin/$BASE failed`, codex did not run. If codex rejects a flag or an argument, do not change the command. In both cases, run `bash "$SKILL_DIR/scripts/notify.sh" escalation "issue $N: codex code review did not run" "<error>"`, show the error to the user, and stop. A fix to the command is a change to this skill.
 
 ## Dispositions
 
