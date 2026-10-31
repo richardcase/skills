@@ -1,0 +1,5 @@
+schema_version: "1.1"
+name: create-pr-contract
+skill: create-pr
+context:
+  scaffold_script: scaffold.sh
