@@ -5,7 +5,7 @@
 set -u
 here="$(cd "$(dirname "$0")" && pwd)"; . "$here/lib.sh"
 stage="${1:-all}"
-missing=(); warnings=()
+missing=(); warnings=(); versions='{}'
 need() { missing+=("$(jq -cn --arg i "$1" --arg f "$2" '{item:$i,fix:$f}')"); }
 warn() { warnings+=("$(jq -cn --arg w "$1" '$w')"); }
 # start is the entry point: it checks everything the later stages need, so a
@@ -26,6 +26,12 @@ if for_stage plan implement; then
   else
     need "binary codex" "install the Codex CLI (npm i -g @openai/codex) and run: codex login"
   fi
+fi
+if command -v codex >/dev/null; then
+  # no pipe: without pipefail, head would hide a failed codex --version
+  v=$(codex --version 2>/dev/null) || v=""
+  v=${v%%$'\n'*}
+  versions=$(jq -cn --arg v "${v:-unknown}" '{codex:$v}')
 fi
 if command -v gh >/dev/null; then
   gh auth status >/dev/null 2>&1 || need "gh login" "run: gh auth login"
@@ -71,5 +77,6 @@ ok=true; [ ${#missing[@]} -eq 0 ] || ok=false
 jq -cn --arg stage "$stage" --argjson ok "$ok" \
   --argjson missing "[$(IFS=,; echo "${missing[*]-}")]" \
   --argjson warnings "[$(IFS=,; echo "${warnings[*]-}")]" \
-  '{stage:$stage,ok:$ok,missing:$missing,warnings:$warnings}'
+  --argjson versions "$versions" \
+  '{stage:$stage,ok:$ok,missing:$missing,warnings:$warnings,versions:$versions}'
 $ok
