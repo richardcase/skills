@@ -58,16 +58,16 @@ Use only the commands written here. Read every id and path from the JSON a comma
 ## plan (worker)
 
 1. Preflight `plan`. Load `state.json`; `gh issue view "$URL" --json title,body,comments`. A plan marker already present means stage `implement`.
-2. REQUIRED SUB-SKILL `grilling`. The issue is the plan under test. Rounds until the frontier is empty and the user confirms. A small issue gets a small frontier, not zero rounds. Facts come from subagents; decisions from the user.
-3. REQUIRED SUB-SKILL `superpowers:writing-plans`. Save the plan to `$STATE_DIR/plan.md`, not under `docs/`, so it never lands in the PR.
-4. Claude review. Dispatch one `Agent` subagent (general-purpose, fresh context) with `prompts/plan-reviewer-agent.md` filled in (`{ISSUE_URL}`, `{PLAN_PATH}`, `{WORKTREE_PATH}`). Save its report to `$STATE_DIR/plan-review-claude.md`. Fix every `blocking` and `should` finding in `plan.md`, or rebut with evidence; write dispositions under the report. Record the counts: `state.plan_review.claude_findings = {total, fixed, rebutted}`.
+2. Grill-with-docs: REQUIRED SUB-SKILLS `grilling` and `domain-modeling`. Invoke both; `grill-with-docs` itself is user-only and cannot be loaded with the Skill tool. The issue is the plan under test. Rounds until the frontier is empty and the user confirms. A small issue gets a small frontier, not zero rounds. Facts come from subagents; decisions from the user. Resolved terms go into `GLOSSARY.md` and qualifying decisions into `docs/adr/` in the worktree as they settle. Leave them uncommitted.
+3. REQUIRED SUB-SKILL `superpowers:writing-plans`. Save the plan to `$STATE_DIR/plan.md`, not under `docs/`, so it never lands in the PR. Run `git status --short -uall -- '*GLOSSARY.md' '*GLOSSARY-MAP.md' '*docs/adr/*'`. When it lists files, task 1 of the plan commits exactly those files as one `docs(<scope>): ...` commit per `references/commit-pr-contract.md`. When it lists nothing, the plan has no docs task.
+4. Claude review. Dispatch one `Agent` subagent (general-purpose, fresh context) with `prompts/plan-reviewer-agent.md` filled in (`{ISSUE_URL}`, `{PLAN_PATH}`, `{WORKTREE_PATH}`, `{DOC_FILES}` as the step 3 `git status` lines, or `none`). Save its report to `$STATE_DIR/plan-review-claude.md`. Fix every `blocking` and `should` finding in `plan.md`, or rebut with evidence; write dispositions under the report. Record the counts: `state.plan_review.claude_findings = {total, fixed, rebutted}`.
 5. Codex plan loop: `references/review-loops.md`, KIND `plan`.
 6. Post the plan summary. Build `$STATE_DIR/plan-comment.md` from the plan comment template in `references/commit-pr-contract.md`: the marker, one summary paragraph, and the Reviews line. The plan body does not go in the comment. The Reviews line takes its counts from `state.json` and the disposition files. Gate the summary paragraph: write it alone to a file and run `ste-check.sh descriptive`; fix until exit 0. Then:
    ```bash
    gh issue comment "$URL" --body-file "$STATE_DIR/plan-comment.md"
    ```
    `state.sh set .stage '"implement"'`, `state.sh stamp plan_posted`, then `notify.sh plan-posted "issue $N: plan posted" "<comment url>"`.
-7. Gate. Show the full plan to the user. Run `command -v code` to choose how:
+7. Gate. Show the full plan to the user, and the step 3 `git status` lines with `git diff` of the tracked ones (untracked files: name them). Run `command -v code` to choose how:
    - `code` is installed: `code "$STATE_DIR/plan.md"`. `notify.sh gate "issue $N: plan needs your go" "Summary posted at <comment url>. The plan is open in VS Code. Say go to implement."` Print the comment URL and end the turn with: "Plan summary posted. The plan is open in VS Code. Say go to implement."
    - `code` is missing: do not try to open the plan. `notify.sh gate "issue $N: plan needs your go" "Summary posted at <comment url>. Review the plan at <plan path>. Say go to implement."` Print the comment URL and the absolute path of `$STATE_DIR/plan.md`, and end the turn with: "Plan summary posted. Review the plan at `<plan path>`. Say go to implement."
 

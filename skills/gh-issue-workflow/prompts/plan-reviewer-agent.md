@@ -4,6 +4,7 @@ Inputs:
 - Issue: {ISSUE_URL} (run `gh issue view {ISSUE_URL} --json title,body,comments`)
 - Plan file: {PLAN_PATH}
 - Worktree: {WORKTREE_PATH} (read-only; do not edit or commit)
+- Uncommitted glossary and ADR files from the grilling: {DOC_FILES}. Plan task 1 commits them. Check that each glossary entry is a domain term with no implementation detail, and that each ADR records a real trade-off.
 
 Review on three lenses, in this order:
 1. Spec compliance. Does the plan deliver what the issue asks, all of it, and nothing it does not ask? Quote the issue line for each gap.
