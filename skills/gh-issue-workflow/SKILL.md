@@ -48,7 +48,7 @@ The stage word is optional and forces a stage. Without it, the stage is detected
 - Preflight first, every stage; `start` checks the needs of every stage. A missing dependency stops the run. There is no substitute reviewer and no skipped grilling.
 - The launcher (`start`) assigns, creates the worktree, starts the worker, and hands off by naming this skill. It never plans.
 - Branch is `issue-N`. Worktree and state live where `references/stages.md` says.
-- Grill-with-docs (`grilling` plus `domain-modeling`) is mandatory in `plan`, however small the issue. The glossary and ADR files it writes are committed by plan task 1.
+- Grilling (`grill-me-picker` plus `domain-modeling`) is mandatory in `plan`, however small the issue. The glossary and ADR files it writes are committed by plan task 1.
 - Review loops cap at 3 rounds, then the user decides. See `references/review-loops.md`. After the codex code loop passes, a standards review and a security review run once each; their fixes are new commits and do not re-open the codex loop.
 - A progress comment on the issue lists the plan tasks and is ticked as each one lands.
 - Retro and abandon append one line to `~/.local/share/gh-issue-workflow/metrics.jsonl`; `metrics` summarises it.
@@ -70,7 +70,7 @@ The stage word is optional and forces a stage. Without it, the stage is detected
 | "I'll add flags to show intent" or "a better branch name" | Only the commands in `stages.md`; branch `issue-N`. Detection depends on both. |
 | "I'll spell out the remaining process in the handoff" | The handoff names the skill. The worker loads it. |
 | "This issue is a one-liner, no questions needed" | Small issue, small frontier. Grill anyway. |
-| "I'll invoke grill-with-docs with the Skill tool" | It is user-only. Invoke `grilling` and `domain-modeling`. |
+| "I'll ask the grilling questions as plain text" | Invoke `grill-me-picker`. In Claude Code, each round uses the AskUserQuestion picker. |
 | "The glossary is a good place for implementation notes" | Terms only. Implementation goes in `plan.md`. |
 | "Reviewers need the whole plan on the issue" | Summary only. The full plan opens in VS Code, or its path is printed, for the user. |
 | "Codex is always wrong on this repo" | Rebut with evidence in a disposition. Three rounds, then the user. |

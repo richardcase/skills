@@ -41,17 +41,18 @@ fi
 
 skills_for() {
   case "$1" in
-    plan) echo grilling domain-modeling grill-with-docs superpowers:writing-plans simplified-technical-english;;
+    plan) echo grill-me-picker domain-modeling superpowers:writing-plans simplified-technical-english;;
     implement) echo superpowers:executing-plans superpowers:verification-before-completion;;
     pr|retro|merge|abandon) echo simplified-technical-english;;
     feedback) echo superpowers:receiving-code-review simplified-technical-english;;
-    start|all) echo grilling domain-modeling grill-with-docs superpowers:writing-plans superpowers:executing-plans superpowers:verification-before-completion superpowers:receiving-code-review simplified-technical-english;;
+    start|all) echo grill-me-picker domain-modeling superpowers:writing-plans superpowers:executing-plans superpowers:verification-before-completion superpowers:receiving-code-review simplified-technical-english;;
   esac
 }
 for s in $(skills_for "$stage"); do
   find_skill_dir "$s" >/dev/null || case "$s" in
     superpowers:*) need "skill $s" "run: claude plugin install superpowers";;
-    grilling|domain-modeling|grill-with-docs) need "skill $s" "run: npx skills@latest add mattpocock/skills --skill $s";;
+    grill-me-picker) need "skill $s" "run: npx skills@latest add richardcase/skills --skill $s";;
+    domain-modeling) need "skill $s" "run: npx skills@latest add mattpocock/skills --skill $s";;
     simplified-technical-english) need "skill simplified-technical-english" "run: npx skills@latest add 0xpili/skills --skill simplified-technical-english";;
     *) need "skill $s" "install the $s skill";;
   esac

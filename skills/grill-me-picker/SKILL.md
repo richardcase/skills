@@ -1,7 +1,6 @@
 ---
 name: grill-me-picker
 description: A relentless interview to sharpen a plan or design, with each round of questions asked through the AskUserQuestion picker when it is available.
-disable-model-invocation: true
 ---
 
 <!--
