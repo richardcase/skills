@@ -1,6 +1,7 @@
 ---
-name: grilling
-description: Grill the user relentlessly about a plan, decision, or idea. Use when the user wants to stress-test their thinking, or uses any 'grill' trigger phrases.
+name: grill-me-picker
+description: A relentless interview to sharpen a plan or design, with each round of questions asked through the AskUserQuestion picker when it is available.
+disable-model-invocation: true
 ---
 
 <!--

@@ -47,7 +47,7 @@ Plugin skills are namespaced. For example, invoke the starter skill with:
 | --- | --- |
 | [`create-pr`](skills/create-pr/SKILL.md) | Commit the current work and open a ready pull request: signed conventional commits, Simplified Technical English descriptions, no agent footers. |
 | [`gh-issue-workflow`](skills/gh-issue-workflow/SKILL.md) | Take a GitHub issue from assignment to a merged pull request in a Herdr worktree: grilled plan with glossary and ADR docs, Claude and Codex reviews, signed conventional commits, review feedback, retro. |
-| [`grilling`](skills/grilling/SKILL.md) | Grill the user about a plan in rounds of questions, each with a recommended answer. Uses the Claude Code question picker when it is available. Derived from [mattpocock/skills](https://github.com/mattpocock/skills) (MIT). |
+| [`grill-me-picker`](skills/grill-me-picker/SKILL.md) | Grill the user about a plan in rounds of questions, each with a recommended answer. Uses the Claude Code question picker when it is available. Invoke it as `/grill-me-picker`. Derived from [mattpocock/skills](https://github.com/mattpocock/skills) (MIT). |
 | [`hello-world`](skills/hello-world/SKILL.md) | A minimal greeting skill that verifies installation and invocation. |
 
 ## Add a skill
