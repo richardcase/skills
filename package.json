@@ -23,7 +23,7 @@
   },
   "packageManager": "npm@10.9.4",
   "devDependencies": {
-    "@anthropic-ai/claude-code": "^2.1.220",
+    "@anthropic-ai/claude-code": "^2.1.251",
     "@changesets/changelog-github": "^0.7.0",
     "@changesets/cli": "^3.0.0",
     "skills": "^1.5.20",
